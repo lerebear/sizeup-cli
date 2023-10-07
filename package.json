@@ -22,7 +22,7 @@
     "@oclif/plugin-plugins": "^3.6.1",
     "octokit": "^3.1.1",
     "simple-git": "^3.20.0",
-    "sizeup": "github:lerebear/sizeup#v0.1.1"
+    "sizeup": "github:lerebear/sizeup#v0.1.2"
   },
   "devDependencies": {
     "@oclif/test": "^2.5.3",
