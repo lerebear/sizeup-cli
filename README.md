@@ -5,15 +5,13 @@ This repository contains a CLI that wraps the [`sizeup` library](https://github.
 ## Installation
 
 ```sh
-npm install sizeup-cli
+npm install -g sizeup-cli
 ```
 
 ## Usage
 
-Run using `npx` e.g.
-
 ```sh
-npx sizeup --help
+sizeup --help
 ```
 
 The output of the above help command looks like this:
