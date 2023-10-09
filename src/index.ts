@@ -1,6 +1,6 @@
 import {Args, Command, Flags, ux} from '@oclif/core'
 import {simpleGit} from 'simple-git'
-import SizeUpLibrary from 'sizeup'
+import {SizeUp as SizeUpCore} from 'sizeup-core'
 import {Octokit} from 'octokit'
 import * as fs from 'node:fs'
 
@@ -106,7 +106,7 @@ export default class SizeUp extends Command {
 
     if (diff) {
       ux.action.start(`Evaluating the diff with the ${flags['config-path'] ? `config from ${flags['config-path']}` : 'default config'}`)
-      const score = SizeUpLibrary.evaluate(diff!, flags['config-path'])
+      const score = SizeUpCore.evaluate(diff!, flags['config-path'])
       ux.action.stop()
       this.log(`Your diff scored ${score.result}${(score.category ? ` (${score.category.name})` : '')}.`)
 
