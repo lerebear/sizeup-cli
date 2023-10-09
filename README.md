@@ -1,6 +1,6 @@
 # SizeUp CLI
 
-This repository contains a CLI that wraps the [`sizeup-core` library](https://github.com/lerebear/sizeup-core) in order to provide a way to estimate the reviewability of a local diff.
+This repository contains a CLI that wraps the [`sizeup` library](https://github.com/lerebear/sizeup-core) in order to provide a way to estimate the reviewability of a local diff.
 
 ## Installation
 

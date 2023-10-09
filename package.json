@@ -1,7 +1,7 @@
 {
   "name": "sizeup-cli",
   "version": "0.1.1",
-  "description": "CLI wrapper for the sizeup-core library",
+  "description": "CLI wrapper for the sizeup library",
   "author": "Ọlálérè Williams",
   "bin": {
     "sizeup": "./bin/run"
