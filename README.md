@@ -1,6 +1,6 @@
 # SizeUp CLI
 
-This repository contains a CLI that wraps the [`sizeup` library](https://github.com/lerebear/sizeup) in order to provide a way to estimate the reviewability of a local diff.
+This repository contains a CLI that wraps the [`sizeup-core` library](https://github.com/lerebear/sizeup-core) in order to provide a way to estimate the reviewability of a local diff.
 
 ## Installation
 
@@ -32,11 +32,11 @@ ARGUMENTS
 
       @wip - special identifier that denotes the modified files in the git working tree (i.e. the result of `git diff`)
       @staged - special identifer that denotes the files in the git staging area (i.e. the result of `git diff --staged`)
-      <url> - The URL of a pull request on GitHub (e.g. "https://github.com/lerebear/sizeup/pull/1")
+      <url> - The URL of a pull request on GitHub (e.g. "https://github.com/lerebear/sizeup-cli/pull/1")
 
 FLAGS
   -c, --config-path=<value>  Path to configuration file for the sizeup lib.
-                             For more details, see: https://github.com/lerebear/sizeup#configuration
+                             For more details, see: https://github.com/lerebear/sizeup-core#configuration
   -t, --token-path=<value>   Path to a file containing a GitHub API token.
                              If this flag is omitted and the `diff` argument is a URL, then this tool will prompt for a token instead.
   -v, --verbose              Explain scoring procedure in detail
@@ -55,5 +55,5 @@ EXAMPLES
 
   (Re)compute the reviewability of the diff from an existing pull request
 
-    $ sizeup https://github.com/lerebear/sizeup/pull/1
+    $ sizeup https://github.com/lerebear/sizeup-cli/pull/1
 ```
