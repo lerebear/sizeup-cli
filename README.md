@@ -23,18 +23,12 @@ USAGE
   $ sizeup [DIFF] [-c <value>] [-t <value>] [-v]
 
 ARGUMENTS
-  DIFF
-      [default: @wip] An identifier for the diff to evalute.
-
-      The following identifiers are supported:
-
-      @wip - special identifier that denotes the modified files in the git working tree (i.e. the result of `git diff`)
-      @staged - special identifer that denotes the files in the git staging area (i.e. the result of `git diff --staged`)
-      <url> - The URL of a pull request on GitHub (e.g. "https://github.com/lerebear/sizeup-cli/pull/1")
+  DIFF  Either an arbitrary set of arguments/flags to be forwarded to `git diff` (in which case those arguments must
+        appear after "--") OR the URL of a pull request on GitHub (e.g. "https://github.com/lerebear/sizeup/pull/1")
 
 FLAGS
   -c, --config-path=<value>  Path to configuration file for the sizeup lib.
-                             For more details, see: https://github.com/lerebear/sizeup-core#configuration
+                             For more details, see: https://github.com/lerebear/sizeup#configuration
   -t, --token-path=<value>   Path to a file containing a GitHub API token.
                              If this flag is omitted and the `diff` argument is a URL, then this tool will prompt for a token instead.
   -v, --verbose              Explain scoring procedure in detail
@@ -43,15 +37,15 @@ DESCRIPTION
   Estimate how difficult a diff will be to review
 
 EXAMPLES
-  Estimate the reviewability of the diff of the modified files in the git working tree
+  Use the diff of the modified files in the git working tree
 
-    $ sizeup @wip
+    $ sizeup
 
-  Estimate the reviewability of the diff of the staged files in the git index using a custom configuration file
+  Use the diff between the current branch the merge target
 
-    $ sizeup @staged  --config-path experimental.yaml
+    $ sizeup -- --merge-base origin/main
 
-  (Re)compute the reviewability of the diff from an existing pull request
+  (Re)compute the score of an existing pull request using a custom configuration file
 
-    $ sizeup https://github.com/lerebear/sizeup-cli/pull/1
+    $ sizeup --config-path experimental.yaml https://github.com/lerebear/sizeup/pull/1
 ```

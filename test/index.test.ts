@@ -8,6 +8,6 @@ describe('sizeup', () => {
   .do(() => sizeup.run([]))
   .it('runs sizeup cmd', ctx => {
     expect(ctx.error).to.be.undefined
-    expect(ctx.stdout).to.match(/^(Your diff scored|The diff identified by '@wip' was empty)/)
+    expect(ctx.stdout).to.match(/^(Your diff scored|The diff of the working tree was empty)/)
   })
 })
