@@ -22,7 +22,7 @@
     "@oclif/plugin-plugins": "^3.6.1",
     "octokit": "^3.1.1",
     "simple-git": "^3.20.0",
-    "sizeup-core": "^0.2.1"
+    "sizeup-core": "^0.3.0"
   },
   "devDependencies": {
     "@oclif/test": "^2.5.3",
