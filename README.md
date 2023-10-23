@@ -1,6 +1,6 @@
 # SizeUp CLI
 
-This repository contains a CLI that wraps the [`sizeup` library](https://github.com/lerebear/sizeup-core) in order to provide a way to estimate the reviewability of a local diff.
+Estimate how difficult a diff will be to review using a configurable scoring mechanism.
 
 ## Installation
 
@@ -37,11 +37,11 @@ DESCRIPTION
   Estimate how difficult a diff will be to review
 
 EXAMPLES
-  Use the diff of the modified files in the git working tree
+  Estimate the diff of the modified files in the git working tree
 
     $ sizeup
 
-  Use the diff between the current branch the merge target
+  Estimate the diff between the current branch the merge target
 
     $ sizeup -- --merge-base origin/main
 
