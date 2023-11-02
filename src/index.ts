@@ -112,7 +112,7 @@ export default class SizeUp extends Command {
         ux.action.stop(`failed (${message.toLowerCase()})`)
       }
     } else {
-      const diffArgs = this.argv.join(' ').split(/\s+--\s+/)[1].split(/\s+/)
+      const diffArgs = this.argv.join(' ').split(/\s*--\s+/)[1].split(/\s+/)
       description = `identified by \`git diff ${diffArgs.join(' ')}\``
       ux.action.start(`Retrieving diff using ${description}`)
       diff = await git.diff(diffArgs)
