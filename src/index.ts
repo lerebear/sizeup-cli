@@ -1,39 +1,49 @@
 import {Args, Command, Flags, ux} from '@oclif/core'
+import * as fs from 'node:fs'
+import {Octokit} from 'octokit'
 import {simpleGit} from 'simple-git'
 import {SizeUp as SizeUpCore} from 'sizeup-core'
-import {Octokit} from 'octokit'
-import * as fs from 'node:fs'
 
 export default class SizeUp extends Command {
-  static strict = false
-  static description = 'Estimate how difficult a diff will be to review';
+  static args = {
+    diff: Args.string({
+      default: '',
+      description: (
+        'Either an arbitrary set of arguments/flags to be forwarded to `git diff` (in which case those arguments must\n'
+        + 'appear after "--") OR the URL of a pull request on GitHub (e.g. "https://github.com/lerebear/sizeup/pull/1")'
+      ),
+      required: false,
+    }),
+  }
+
+  static description = 'Estimate how difficult a diff will be to review'
 
   static examples = [
     {
-      description: 'Use the diff of the modified files in the git working tree',
       command: '<%= config.bin %>',
+      description: 'Use the diff of the modified files in the git working tree',
     },
     {
-      description: 'Use the diff between the current branch the merge target',
       command: '<%= config.bin %> -- --merge-base origin/main',
+      description: 'Use the diff between the current branch the merge target',
     },
     {
-      description: '(Re)compute the score of an existing pull request using a custom configuration file',
       command: '<%= config.bin %> --config-path experimental.yaml https://github.com/lerebear/sizeup/pull/1',
+      description: '(Re)compute the score of an existing pull request using a custom configuration file',
     },
-  ];
+  ]
 
   static flags = {
     'config-path': Flags.string({
       char: 'c',
-      description: 'Path to configuration file for the sizeup lib.\n' +
-        'For more details, see: https://github.com/lerebear/sizeup#configuration',
+      description: 'Path to configuration file for the sizeup lib.\n'
+        + 'For more details, see: https://github.com/lerebear/sizeup#configuration',
       required: false,
     }),
     'token-path': Flags.string({
       char: 't',
-      description: 'Path to a file containing a GitHub API token.\n' +
-       'If this flag is omitted and the `diff` argument is a URL, then this tool will prompt for a token instead.',
+      description: 'Path to a file containing a GitHub API token.\n'
+       + 'If this flag is omitted and the `diff` argument is a URL, then this tool will prompt for a token instead.',
       required: false,
     }),
     verbose: Flags.boolean({
@@ -41,18 +51,9 @@ export default class SizeUp extends Command {
       description: 'Explain scoring procedure in detail',
       required: false,
     }),
-  };
+  }
 
-  static args = {
-    diff: Args.string({
-      description: (
-        'Either an arbitrary set of arguments/flags to be forwarded to `git diff` (in which case those arguments must\n' +
-        'appear after "--") OR the URL of a pull request on GitHub (e.g. "https://github.com/lerebear/sizeup/pull/1")'
-      ),
-      required: false,
-      default: '',
-    }),
-  };
+  static strict = false
 
   async run(): Promise<void> {
     const {args, flags} = await this.parse(SizeUp)
@@ -74,6 +75,7 @@ export default class SizeUp extends Command {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private async fetchDiff(args: any, flags: any): Promise<{description: string, diff: string}> {
     const git = simpleGit()
 
@@ -87,24 +89,25 @@ export default class SizeUp extends Command {
     } else if (args.diff.startsWith('https://')) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [_scheme, _blank, _domain, owner, repo, _path, number] = args.diff.split('/')
-      const token = flags['token-path'] ?
-        fs.readFileSync(flags['token-path']).toString().trim() :
-        await ux.prompt('Please enter a GitHub API token', {type: 'hide'})
+      const token = flags['token-path']
+        ? fs.readFileSync(flags['token-path']).toString().trim()
+        : await ux.prompt('Please enter a GitHub API token', {type: 'hide'})
       const octokit = new Octokit({auth: token})
 
       ux.action.start(`Retrieving diff from ${args.diff}`)
       description = `retrieved from ${args.diff}`
 
       try {
-        diff = (
+        const diffWrapper = (
           await octokit.rest.pulls.get({
-            owner: owner,
-            repo: repo,
+            mediaType: {format: 'diff'},
+            owner,
             // eslint-disable-next-line camelcase
             pull_number: Number.parseInt(number, 10),
-            mediaType: {format: 'diff'},
+            repo,
           })
-        ).data as unknown as string
+        )
+        diff = diffWrapper.data as unknown as string
         ux.action.stop()
       } catch (error) {
         diff = ''

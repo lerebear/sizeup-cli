@@ -8,6 +8,9 @@
     "strict": true,
     "target": "es2019"
   },
+  "ts-node": {
+    "esm": true
+  },
   "include": [
     "src/**/*"
   ]
