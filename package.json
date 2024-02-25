@@ -23,7 +23,7 @@
     "@oclif/plugin-warn-if-update-available": "^3.0.2",
     "octokit": "^3.1.1",
     "simple-git": "^3.20.0",
-    "sizeup-core": "^0.4.0"
+    "sizeup-core": "^0.5.0"
   },
   "devDependencies": {
     "@oclif/test": "^2.5.3",
