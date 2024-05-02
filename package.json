@@ -19,7 +19,7 @@
   "dependencies": {
     "@oclif/core": "^3",
     "@oclif/plugin-help": "^5",
-    "@oclif/plugin-plugins": "^3.6.1",
+    "@oclif/plugin-plugins": "^5.0.18",
     "@oclif/plugin-warn-if-update-available": "^3.0.2",
     "octokit": "^3.1.1",
     "simple-git": "^3.20.0",
