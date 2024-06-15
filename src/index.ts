@@ -1,8 +1,14 @@
+/* eslint-disable perfectionist/sort-classes */
 import {Args, Command, Flags, ux} from '@oclif/core'
 import * as fs from 'node:fs'
 import {Octokit} from 'octokit'
-import {simpleGit} from 'simple-git'
+import {SimpleGit, simpleGit} from 'simple-git'
 import {SizeUp as SizeUpCore} from 'sizeup-core'
+
+interface DiffResult {
+  description: string
+  diff: string
+}
 
 export default class SizeUp extends Command {
   static args = {
@@ -76,26 +82,31 @@ export default class SizeUp extends Command {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async fetchDiff(args: any, flags: any): Promise<{description: string, diff: string}> {
+  private async fetchDiff(args: any, flags: any): Promise<DiffResult> {
     const git = simpleGit()
 
-    let description: string
-    let diff: string | undefined
-    if (!args.diff) {
-      ux.action.start('Retrieving diff from the working tree')
-      description = 'of the working tree'
-      diff = await git.diff()
-      ux.action.stop()
-    } else if (args.diff.startsWith('https://')) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const [_scheme, _blank, _domain, owner, repo, _path, number] = args.diff.split('/')
-      const token = flags['token-path']
-        ? fs.readFileSync(flags['token-path']).toString().trim()
-        : await ux.prompt('Please enter a GitHub API token', {type: 'hide'})
-      const octokit = new Octokit({auth: token})
+    if (args.diff?.startsWith('https://')) {
+      return this.pullRequestDiff(args.diff, flags['token-path'])
+    }
 
-      ux.action.start(`Retrieving diff from ${args.diff}`)
-      description = `retrieved from ${args.diff}`
+    if (args.diff) {
+      return this.customLocalDiff(git)
+    }
+
+    return this.defaultLocalDiff(git)
+  }
+
+  private async pullRequestDiff(url: string, tokenPath: string): Promise<DiffResult> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const [_scheme, _blank, _domain, owner, repo, _path, number] = url.split('/')
+    const token = tokenPath
+      ? fs.readFileSync(tokenPath).toString().trim()
+      : await ux.prompt('Please enter a GitHub API token', {type: 'hide'})
+    const octokit = new Octokit({auth: token})
+    const description = `retrieved from ${url}`
+    const diff = await this._diff(`Retrieving diff from ${url}`, async () => {
+      let diff: string
+      let message: string | undefined
 
       try {
         const diffWrapper = (
@@ -108,23 +119,38 @@ export default class SizeUp extends Command {
           })
         )
         diff = diffWrapper.data as unknown as string
-        ux.action.stop()
+        message = undefined
       } catch (error) {
         diff = ''
-        const message = (error instanceof Error) ? error.message : ''
-        ux.action.stop(`failed (${message.toLowerCase()})`)
+        message = `failed (${((error instanceof Error) ? error.message : '').toLowerCase()})`
       }
-    } else {
-      const diffArgs = this.argv.join(' ').split(/\s*--\s+/)[1].split(/\s+/)
-      description = `identified by \`git diff ${diffArgs.join(' ')}\``
-      ux.action.start(`Retrieving diff using ${description}`)
-      diff = await git.diff(diffArgs)
-      ux.action.stop()
-    }
 
-    return {
-      description,
-      diff,
-    }
+      return {error: message, result: diff}
+    })
+
+    return {description, diff}
+  }
+
+  private async customLocalDiff(git: SimpleGit): Promise<DiffResult> {
+    const diffArgs = this.argv.join(' ').split(/\s*--\s+/)[1].split(/\s+/)
+    const description = `identified by \`git diff ${diffArgs.join(' ')}\``
+    const diff = await this._diff(`Retrieving diff using ${description}`, async () => ({result: await git.diff(diffArgs)}))
+
+    return {description, diff}
+  }
+
+  private async defaultLocalDiff(git: SimpleGit): Promise<DiffResult> {
+    const description = 'of the working tree'
+    const diff = await this._diff('Retrieving diff from the working tree', async () => ({result: await git.diff()}))
+
+    return {description, diff}
+  }
+
+  private async _diff(message: string, lambda: () => Promise<{ error?: string, result: string}>): Promise<string> {
+    ux.action.start(message)
+    const {error, result} = await lambda()
+    ux.action.stop(error)
+
+    return result
   }
 }
