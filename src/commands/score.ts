@@ -4,7 +4,7 @@ import {Octokit} from 'octokit'
 import {simpleGit} from 'simple-git'
 import {SizeUp as SizeUpCore} from 'sizeup-core'
 
-export default class SizeUp extends Command {
+export default class Score extends Command {
   static args = {
     diff: Args.string({
       default: '',
@@ -56,7 +56,7 @@ export default class SizeUp extends Command {
   static strict = false
 
   async run(): Promise<void> {
-    const {args, flags} = await this.parse(SizeUp)
+    const {args, flags} = await this.parse(Score)
     const configChoice = flags['config-path'] ? `config from ${flags['config-path']}` : 'default config'
     const {description, diff} = await this.fetchDiff(args, flags)
 
