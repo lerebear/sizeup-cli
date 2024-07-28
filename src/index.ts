@@ -2,21 +2,17 @@
 import {Args, Command, Flags, ux} from '@oclif/core'
 import * as fs from 'node:fs'
 import {Octokit} from 'octokit'
-import {SimpleGit, simpleGit} from 'simple-git'
-import {SizeUp as SizeUpCore} from 'sizeup-core'
-
-interface DiffResult {
-  description: string
-  diff: string
-}
+import {simpleGit} from 'simple-git'
+import {Score, SizeUp as SizeUpCore} from 'sizeup-core'
 
 export default class SizeUp extends Command {
   static args = {
     diff: Args.string({
       default: '',
       description: (
-        'Either an arbitrary set of arguments/flags to be forwarded to `git diff` (in which case those arguments must\n'
-        + 'appear after "--") OR the URL of a pull request on GitHub (e.g. "https://github.com/lerebear/sizeup/pull/1")'
+        'Options that specify the diff to evaluate. This should be of the form `[url] -- [diff options]`:\n\n'
+      + '[url] - To (re-)evaluate the diff of a pull request on GitHub, provide the URL of that pull request here e.g. https://github.com/lerebear/sizeup/pull/1. This can be omitted in order to evaluate a local diff instead.\n\n'
+      + '[diff options] - To specify custom options to `git diff` (e.g. --ignore-space-change), specify those options here. These must appear after the literal \'--\', even when the [url] argument is omitted.'
       ),
       required: false,
     }),
@@ -34,8 +30,8 @@ export default class SizeUp extends Command {
       description: 'Use the diff between the current branch the merge target',
     },
     {
-      command: '<%= config.bin %> --config-path experimental.yaml https://github.com/lerebear/sizeup/pull/1',
-      description: '(Re)compute the score of an existing pull request using a custom configuration file',
+      command: '<%= config.bin %> --config-path experimental.yaml https://github.com/lerebear/sizeup/pull/1 -- --ignore-space-change',
+      description: '(Re)compute the score of an existing pull request using both a custom configuration file and custom `git diff` options',
     },
   ]
 
@@ -63,17 +59,18 @@ export default class SizeUp extends Command {
 
   async run(): Promise<void> {
     const {args, flags} = await this.parse(SizeUp)
-    const configChoice = flags['config-path'] ? `config from ${flags['config-path']}` : 'default config'
-    const {description, diff} = await this.fetchDiff(args, flags)
+    let score: Score | undefined
 
-    let score
-    if (diff) {
-      ux.action.start(`Evaluating the diff with the ${configChoice}`)
-      score = SizeUpCore.evaluate(diff, flags['config-path'])
-      ux.action.stop()
-      this.log(`Your diff scored ${score.result}${(score.category ? ` (${score.category.name})` : '')}.`)
+    if (args.diff?.startsWith('https://')) {
+      score = await this.evaluatePullRequest(flags, args.diff)
+    } else if (args.diff) {
+      score = await this.evaluateCustomDiff(flags)
     } else {
-      this.log(`The diff ${description} was empty.`)
+      score = await this.evaluateWorkingTree(flags)
+    }
+
+    if (score) {
+      this.log(`Your diff scored ${score.result}${(score.category ? ` (${score.category.name})` : '')}.`)
     }
 
     if (score && flags.verbose) {
@@ -82,75 +79,112 @@ export default class SizeUp extends Command {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private async fetchDiff(args: any, flags: any): Promise<DiffResult> {
-    const git = simpleGit()
-
-    if (args.diff?.startsWith('https://')) {
-      return this.pullRequestDiff(args.diff, flags['token-path'])
-    }
-
-    if (args.diff) {
-      return this.customLocalDiff(git)
-    }
-
-    return this.defaultLocalDiff(git)
-  }
-
-  private async pullRequestDiff(url: string, tokenPath: string): Promise<DiffResult> {
+  private async evaluatePullRequest(flags: any, url: string): Promise<Score | undefined> {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [_scheme, _blank, _domain, owner, repo, _path, number] = url.split('/')
-    const token = tokenPath
-      ? fs.readFileSync(tokenPath).toString().trim()
-      : await ux.prompt('Please enter a GitHub API token', {type: 'hide'})
+    const token = await this.fetchToken(flags['token-path'])
     const octokit = new Octokit({auth: token})
-    const description = `retrieved from ${url}`
-    const diff = await this._diff(`Retrieving diff from ${url}`, async () => {
-      let diff: string
-      let message: string | undefined
 
-      try {
-        const diffWrapper = (
-          await octokit.rest.pulls.get({
-            mediaType: {format: 'diff'},
-            owner,
-            // eslint-disable-next-line camelcase
-            pull_number: Number.parseInt(number, 10),
-            repo,
-          })
-        )
-        diff = diffWrapper.data as unknown as string
-        message = undefined
-      } catch (error) {
-        diff = ''
-        message = `failed (${((error instanceof Error) ? error.message : '').toLowerCase()})`
-      }
+    return this.reportProgress(
+      `Evaluating the diff from ${url} with the ${this.configChoice(flags)}`,
+      async () => {
+        try {
+          const pull = (
+            await octokit.rest.pulls.get({
+              owner,
+              // eslint-disable-next-line camelcase
+              pull_number: Number.parseInt(number, 10),
+              repo,
+            })
+          )
 
-      return {error: message, result: diff}
-    })
+          const diffOptions = (this.argv.join(' ').split(/\s*--\s+/)[1])?.split(/\s+/) || []
+          const cloneDirectory = `/tmp/${repo}`
 
-    return {description, diff}
+          // Clear the contents of the clone directory,
+          // otherwise SizeUpCore.evaluate will refuse to overwrite them.
+          fs.rmSync(cloneDirectory, {force: true, recursive: true})
+          fs.mkdirSync(cloneDirectory, {recursive: true})
+
+          return {
+            result: SizeUpCore.evaluate(
+              {
+                baseRef: pull.data.base.ref,
+                cloneDirectory,
+                diffOptions,
+                headRef: pull.data.head.ref,
+                repo: `${owner}/${repo}`,
+                token,
+              },
+              flags['config-path'],
+            ),
+          }
+        } catch (error) {
+          return {error: `failed (${((error instanceof Error) ? error.message : '').toLowerCase()})`}
+        }
+      },
+    )
   }
 
-  private async customLocalDiff(git: SimpleGit): Promise<DiffResult> {
-    const diffArgs = this.argv.join(' ').split(/\s*--\s+/)[1].split(/\s+/)
-    const description = `identified by \`git diff ${diffArgs.join(' ')}\``
-    const diff = await this._diff(`Retrieving diff using ${description}`, async () => ({result: await git.diff(diffArgs)}))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async evaluateCustomDiff(flags: any): Promise<Score | undefined> {
+    const git = simpleGit()
+    const diffOptions = (this.argv.join(' ').split(/\s*--\s+/)[1])?.split(/\s+/) || []
+    const diffDescription = `identified by \`git diff ${diffOptions.join(' ')}\``
 
-    return {description, diff}
+    const diff = await this.reportProgress(
+      `Retrieving diff ${diffDescription}`,
+      async () => ({result: await git.diff(diffOptions)}),
+    )
+
+    if (!diff) {
+      this.log(`The diff ${diffDescription} was empty.`)
+      return
+    }
+
+    return this.reportProgress(
+      `Evaluating the diff with the ${this.configChoice(flags)}`,
+      async () => ({result: await SizeUpCore.evaluate(diff, flags['config-path'])}),
+    )
   }
 
-  private async defaultLocalDiff(git: SimpleGit): Promise<DiffResult> {
-    const description = 'of the working tree'
-    const diff = await this._diff('Retrieving diff from the working tree', async () => ({result: await git.diff()}))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async evaluateWorkingTree(flags: any): Promise<Score | undefined> {
+    const git = simpleGit()
 
-    return {description, diff}
+    const diff = await this.reportProgress(
+      'Retrieving diff from the working tree',
+      async () => ({result: await git.diff()}),
+    )
+
+    if (!diff) {
+      this.log('The diff of the working tree was empty.')
+      return
+    }
+
+    return this.reportProgress(
+      `Evaluating the diff with the ${this.configChoice(flags)}`,
+      async () => ({result: await SizeUpCore.evaluate(diff, flags['config-path'])}),
+    )
   }
 
-  private async _diff(message: string, lambda: () => Promise<{ error?: string, result: string}>): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private async reportProgress(message: string, lambda: () => Promise<{ error?: string, result?: any}>): Promise<any> {
     ux.action.start(message)
     const {error, result} = await lambda()
     ux.action.stop(error)
 
     return result
+  }
+
+  private async fetchToken(path?: string): Promise<string> {
+    return path
+      ? fs.readFileSync(path).toString().trim()
+      : ux.prompt('Please enter a GitHub API token', {type: 'hide'})
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private configChoice(flags: any): string {
+    return flags['config-path'] ? `config from ${flags['config-path']}` : 'default config'
   }
 }
