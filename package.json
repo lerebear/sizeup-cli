@@ -17,7 +17,8 @@
     "/oclif.manifest.json"
   ],
   "dependencies": {
-    "@oclif/core": "^3",
+    "@inquirer/password": "^2.1.22",
+    "@oclif/core": "^4",
     "@oclif/plugin-help": "^5",
     "@oclif/plugin-plugins": "^5.0.18",
     "@oclif/plugin-warn-if-update-available": "^3.0.2",
@@ -45,7 +46,10 @@
     "bin": "sizeup",
     "dirname": "sizeup",
     "default": ".",
-    "commands": "./dist",
+    "commands": {
+      "strategy": "single",
+      "target": "./dist/index.js"
+    },
     "plugins": [
       "@oclif/plugin-help",
       "@oclif/plugin-warn-if-update-available"

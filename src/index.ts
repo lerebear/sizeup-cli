@@ -1,4 +1,5 @@
 /* eslint-disable perfectionist/sort-classes */
+import password from '@inquirer/password'
 import {Args, Command, Flags, ux} from '@oclif/core'
 import * as fs from 'node:fs'
 import {Octokit} from 'octokit'
@@ -180,7 +181,7 @@ export default class SizeUp extends Command {
   private async fetchToken(path?: string): Promise<string> {
     return path
       ? fs.readFileSync(path).toString().trim()
-      : ux.prompt('Please enter a GitHub API token', {type: 'hide'})
+      : password({message: 'Please enter a GitHub API token'})
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
