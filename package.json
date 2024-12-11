@@ -4,7 +4,7 @@
   "description": "CLI wrapper for the sizeup library",
   "author": "Ọlálérè Williams",
   "bin": {
-    "sizeup": "./bin/run"
+    "sizeup": "./bin/run.js"
   },
   "homepage": "https://github.com/lerebear/sizeup-cli",
   "license": "MIT",
@@ -75,5 +75,6 @@
   "keywords": [
     "oclif"
   ],
+  "type": "module",
   "types": "dist/index.d.ts"
 }
