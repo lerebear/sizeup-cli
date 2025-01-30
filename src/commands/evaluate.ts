@@ -4,9 +4,9 @@ import * as fs from 'node:fs'
 import {Octokit} from 'octokit'
 import {read} from 'read'
 import {simpleGit} from 'simple-git'
-import {Score, SizeUp as SizeUpCore} from 'sizeup-core'
+import {Score, SizeUp} from 'sizeup-core'
 
-export default class SizeUp extends Command {
+export default class Evaluate extends Command {
   static args = {
     diff: Args.string({
       default: '',
@@ -59,7 +59,7 @@ export default class SizeUp extends Command {
   static strict = false
 
   async run(): Promise<void> {
-    const {args, flags} = await this.parse(SizeUp)
+    const {args, flags} = await this.parse(Evaluate)
     let score: Score | undefined
 
     if (args.diff?.startsWith('https://')) {
@@ -103,12 +103,12 @@ export default class SizeUp extends Command {
           const cloneDirectory = `/tmp/${repo}`
 
           // Clear the contents of the clone directory,
-          // otherwise SizeUpCore.evaluate will refuse to overwrite them.
+          // otherwise SizeUp.evaluate will refuse to overwrite them.
           fs.rmSync(cloneDirectory, {force: true, recursive: true})
           fs.mkdirSync(cloneDirectory, {recursive: true})
 
           return {
-            result: SizeUpCore.evaluate(
+            result: SizeUp.evaluate(
               {
                 baseRef: pull.data.base.ref,
                 cloneDirectory,
@@ -145,7 +145,7 @@ export default class SizeUp extends Command {
 
     return this.reportProgress(
       `Evaluating the diff with the ${this.configChoice(flags)}`,
-      async () => ({result: await SizeUpCore.evaluate(diff, flags['config-path'])}),
+      async () => ({result: await SizeUp.evaluate(diff, flags['config-path'])}),
     )
   }
 
@@ -165,7 +165,7 @@ export default class SizeUp extends Command {
 
     return this.reportProgress(
       `Evaluating the diff with the ${this.configChoice(flags)}`,
-      async () => ({result: await SizeUpCore.evaluate(diff, flags['config-path'])}),
+      async () => ({result: await SizeUp.evaluate(diff, flags['config-path'])}),
     )
   }
 

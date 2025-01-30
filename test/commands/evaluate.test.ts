@@ -1,6 +1,6 @@
 import {expect, test} from '@oclif/test'
 
-import sizeup from '../src'
+import sizeup from '../../src/commands/evaluate'
 
 describe('sizeup', () => {
   test
